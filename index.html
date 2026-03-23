@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sugnition — Thesis Title Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4faf6;
+      --surface: #ffffff;
+      --card: #ffffff;
+      --card-hover: #edf7f1;
+      --border: rgba(34,139,74,0.22);
+      --accent: #1a7a3f;
+      --accent2: #22a05a;
+      --text: #1a2e22;
+      --muted: #6b8f78;
+      --success: #16a34a;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'EB Garamond', Georgia, serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background texture ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(34,160,90,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(22,163,74,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ── */
+    header {
+      padding: 48px 0 32px;
+      text-align: center;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .site-logo {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 2px 6px rgba(34,160,90,0.2));
+    }
+
+    .logo-badge {
+      display: inline-block;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(26,122,63,0.3);
+      padding: 5px 16px;
+      border-radius: 100px;
+    }
+
+    header h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(2.6rem, 6vw, 4.2rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    header h1 span {
+      font-style: italic;
+      color: var(--accent2);
+    }
+
+    header p {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 300;
+      max-width: 480px;
+      margin-inline: auto;
+      line-height: 1.6;
+    }
+
+    /* ── Step indicator ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 32px 0 40px;
+    }
+
+    .step-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(34,160,90,0.2);
+      border: 1px solid rgba(34,160,90,0.3);
+      transition: all 0.4s;
+    }
+    .step-dot.active { background: var(--accent2); border-color: var(--accent2); width: 24px; border-radius: 4px; }
+    .step-dot.done { background: var(--success); border-color: var(--success); }
+
+    /* ── Section heading ── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    /* ── Step sections ── */
+    #step-env { animation: fadeUp 0.5s ease both; }
+    #step-result { display: none; animation: fadeUp 0.5s ease both; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Environment dropdown ── */
+    .env-select-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .env-select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--muted);
+      pointer-events: none;
+      transition: border-top-color 0.2s;
+    }
+    .env-select-wrap:focus-within::after { border-top-color: var(--accent2); }
+
+    #envSelect {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 1.05rem;
+      font-weight: 500;
+      padding: 15px 44px 15px 18px;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px rgba(34,139,74,0.08);
+    }
+    #envSelect:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(34,160,90,0.15); }
+    #envSelect option { background: #ffffff; font-size: 0.95rem; padding: 8px; }
+    #envSelect option:disabled { color: var(--muted); }
+
+    /* ── Environment preview card ── */
+    .env-preview {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 32px;
+      animation: fadeUp 0.3s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .env-preview::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, var(--preview-color, #22a05a) 0%, transparent 60%);
+      opacity: 0.06;
+      pointer-events: none;
+    }
+    .env-preview.visible { display: flex; align-items: center; gap: 16px; }
+
+    .env-preview-icon {
+      font-size: 2.4rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .env-preview-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .env-preview-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .env-preview-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--preview-color, var(--accent));
+      flex-shrink: 0;
+      margin-left: auto;
+      box-shadow: 0 0 8px var(--preview-color, var(--accent));
+    }
+
+    /* ── Options row ── */
+    .options-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .options-row label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+
+    select, .count-input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 1rem;
+      padding: 9px 14px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    select:focus, .count-input:focus { border-color: var(--accent2); box-shadow: 0 0 0 3px rgba(34,160,90,0.12); }
+    select option { background: #ffffff; }
+
+    .count-input { width: 70px; text-align: center; }
+
+    /* ── Generate button ── */
+    .btn-generate {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #22a05a, #1a7a3f);
+      color: #fff;
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 32px;
+      cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 4px 24px rgba(34,160,90,0.3);
+    }
+    .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(34,160,90,0.4); }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 1rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-back:hover { color: var(--accent); border-color: rgba(34,160,90,0.4); }
+
+    /* ── Result section ── */
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .result-env-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .result-env-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent2);
+    }
+
+    .titles-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .title-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      transition: all 0.2s;
+      animation: fadeUp 0.4s ease both;
+      box-shadow: 0 1px 6px rgba(34,139,74,0.07);
+    }
+
+    .title-card:hover { background: var(--card-hover); border-color: rgba(34,160,90,0.25); }
+
+    .title-num {
+      flex-shrink: 0;
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: rgba(34,160,90,0.1);
+      border: 1px solid rgba(34,160,90,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 1px;
+    }
+
+    .title-text {
+      flex: 1;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.08rem;
+      font-weight: 400;
+      line-height: 1.6;
+      color: #1a2e22;
+    }
+
+    .title-actions {
+      flex-shrink: 0;
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+    }
+    .icon-btn:hover { background: var(--card-hover); color: var(--accent); border-color: rgba(34,160,90,0.3); }
+    .icon-btn.copied { color: var(--success); border-color: var(--success); }
+
+    /* ── Regen row ── */
+    .regen-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      background: #fff;
+      border: 1px solid rgba(34,160,90,0.3);
+      color: var(--success);
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 12px 20px;
+      border-radius: 12px;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.2, 0, 0, 1);
+      z-index: 100;
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(34,160,90,0.15);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 48px 0 32px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* ── Loading spinner ── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .options-row { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrapper">
+
+  <header>
+    <div class="logo-wrap">
+      <img src="logo.png" alt="Sugnition logo" class="site-logo" />
+      <div class="logo-badge">Sugnition</div>
+    </div>
+    <h1>Thesis Title <span>Generator</span></h1>
+    <p>Choose a research environment, then generate compelling thesis titles tailored to your field.</p>
+  </header>
+
+  <div class="steps">
+    <div class="step-dot active" id="dot-1"></div>
+    <div class="step-dot" id="dot-2"></div>
+  </div>
+
+  <!-- STEP 1: Environment selection -->
+  <div id="step-env">
+    <div class="section-label">Step 1 — Select a Research Environment</div>
+
+    <div class="env-select-wrap">
+      <select id="envSelect">
+        <option value="" disabled selected>Choose an environment</option>
+      </select>
+    </div>
+
+    <div class="env-preview" id="envPreview">
+      <div class="env-preview-icon" id="previewIcon"></div>
+      <div>
+        <div class="env-preview-name" id="previewName"></div>
+        <div class="env-preview-desc" id="previewDesc"></div>
+      </div>
+      <div class="env-preview-dot" id="previewDot"></div>
+    </div>
+
+    <div class="options-row">
+      <label>Research type</label>
+      <select id="researchType">
+        <option value="quantitative">Quantitative</option>
+        <option value="qualitative">Qualitative</option>
+        <option value="mixed">Mixed Methods</option>
+        <option value="experimental">Experimental</option>
+        <option value="descriptive">Descriptive</option>
+        <option value="developmental">Developmental</option>
+      </select>
+
+      <label>Number of titles</label>
+      <input class="count-input" id="titleCount" type="number" value="5" min="1" max="15" />
+    </div>
+
+    <div style="display:flex; justify-content:center;">
+      <button class="btn-generate" id="btnGenerate" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        Generate Titles
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Results -->
+  <div id="step-result">
+    <div class="result-header">
+      <div>
+        <div class="section-label">Step 2 — Generated Thesis Titles</div>
+        <span class="result-env-badge"><span class="dot"></span><span id="resultEnvLabel"></span></span>
+      </div>
+      <button class="btn-back" id="btnBack">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M5 12l7-7M5 12l7 7"/></svg>
+        Change Environment
+      </button>
+    </div>
+
+    <div class="titles-list" id="titlesList"></div>
+
+    <div class="regen-row" style="justify-content:center;">
+      <button class="btn-generate" id="btnRegen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        Regenerate
+      </button>
+      <button class="btn-back" id="btnCopyAll">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy All
+      </button>
+    </div>
+  </div>
+
+  <footer>Sugnition &copy; 2026</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Environment definitions ──────────────────────────────────────────────────
+const ENVIRONMENTS = [
+  {
+    id: 'hospital',
+    name: 'Hospital / Healthcare',
+    icon: '🏥',
+    desc: 'Clinical care, patient outcomes, medical systems',
+    color: '#e05c6b',
+    algorithms: ['K-Nearest Neighbor (KNN)','Random Forest','Naive Bayes','Support Vector Machine (SVM)','Decision Tree','Neural Network','Logistic Regression','Gradient Boosting','Linear Regression','Long Short-Term Memory (LSTM)'],
+    keywords: {
+      subjects: ['Patient Outcomes','Healthcare Quality','Clinical Efficiency','Hospital Management','Nursing Practices','Electronic Health Records','Patient Satisfaction','Telemedicine Services','Medical Errors','Healthcare Workers','Emergency Response','Medication Adherence'],
+      actions: ['Improving','Assessing','Evaluating','Analyzing','Enhancing','Reducing','Optimizing','Implementing','Measuring','Investigating'],
+      methods: ['A Quantitative Study','A Qualitative Inquiry','A Descriptive Analysis','A Case Study','An Empirical Investigation','A Systematic Review','A Mixed-Methods Approach'],
+      contexts: ['in Public Hospitals','in Rural Health Centers','in Urban Tertiary Hospitals','in Philippine General Hospitals','in Community Health Clinics','in Critical Care Units','among Frontline Health Workers'],
+      outcomes: ['Patient Safety','Operational Efficiency','Staff Performance','Service Delivery','Health Literacy','Quality of Care','Cost Effectiveness'],
+    }
+  },
+  {
+    id: 'education',
+    name: 'Education',
+    icon: '🎓',
+    desc: 'Teaching, learning, academic performance',
+    color: '#4e8ef7',
+    algorithms: ['Decision Tree','Random Forest','K-Nearest Neighbor (KNN)','Naive Bayes','Neural Network','Support Vector Machine (SVM)','Logistic Regression','Apriori Algorithm','Linear Regression','Collaborative Filtering'],
+    keywords: {
+      subjects: ['Academic Performance','Student Engagement','Teaching Strategies','Classroom Management','Learning Outcomes','Digital Literacy','Curriculum Development','Student Motivation','Teacher Effectiveness','Inclusive Education','Online Learning','Blended Learning'],
+      actions: ['Investigating','Enhancing','Measuring','Evaluating','Analyzing','Examining','Assessing','Exploring','Comparing'],
+      methods: ['A Descriptive Study','A Quasi-Experimental Design','A Phenomenological Study','A Case Study','A Survey-Based Research','A Comparative Analysis'],
+      contexts: ['in Public Elementary Schools','in Higher Education Institutions','in State Universities','among High School Students','among College Freshmen','in K–12 Classrooms','in Rural Schools'],
+      outcomes: ['Academic Achievement','Critical Thinking Skills','Learner Retention','Teacher Competence','Educational Quality','Student Wellbeing','Graduation Rates'],
+    }
+  },
+  {
+    id: 'agriculture',
+    name: 'Agriculture',
+    icon: '🌾',
+    desc: 'Farming, crops, food security, sustainability',
+    color: '#5dbf6e',
+    algorithms: ['Random Forest','Convolutional Neural Network (CNN)','Support Vector Machine (SVM)','K-Means Clustering','Decision Tree','Long Short-Term Memory (LSTM)','Naive Bayes','Gradient Boosting','Linear Regression','Image Segmentation Algorithm'],
+    keywords: {
+      subjects: ['Crop Yield','Soil Health','Sustainable Farming Practices','Irrigation Systems','Pest Management','Organic Farming','Food Security','Smallholder Farmers','Agricultural Technology','Climate Adaptation','Post-Harvest Losses','Farm Productivity'],
+      actions: ['Assessing','Improving','Evaluating','Analyzing','Investigating','Examining','Optimizing','Enhancing'],
+      methods: ['A Field-Based Study','An Experimental Research','A Descriptive Analysis','A Comparative Study','A Survey Research','A Mixed-Methods Investigation'],
+      contexts: ['in Rice-Producing Communities','in Vegetable Farming Regions','among Smallholder Farmers','in Upland Farming Communities','in Lowland Agricultural Areas','in Tropical Climate Zones'],
+      outcomes: ['Food Security','Farmer Income','Crop Productivity','Environmental Sustainability','Water Use Efficiency','Soil Fertility','Agricultural Resilience'],
+    }
+  },
+  {
+    id: 'technology',
+    name: 'Technology & IT',
+    icon: '💻',
+    desc: 'Software, systems, cybersecurity, AI',
+    color: '#8b6fcb',
+    algorithms: ['AES Encryption Algorithm','RSA Algorithm','Random Forest','K-Nearest Neighbor (KNN)','Support Vector Machine (SVM)','Neural Network','Decision Tree','Dijkstra\'s Algorithm','SHA-256 Hashing Algorithm','Anomaly Detection Algorithm'],
+    keywords: {
+      subjects: ['Cybersecurity Practices','Artificial Intelligence Adoption','Mobile Application Development','Data Privacy Awareness','Cloud Computing Integration','System Usability','Digital Transformation','Machine Learning Models','User Experience Design','Information Systems','Network Security','Blockchain Technology'],
+      actions: ['Developing','Evaluating','Assessing','Implementing','Analyzing','Designing','Investigating','Examining'],
+      methods: ['A System Development Study','A Usability Study','A Quantitative Analysis','A Developmental Research','A Case Study','An Empirical Investigation'],
+      contexts: ['in Small and Medium Enterprises','in Government Agencies','among IT Professionals','in Academic Institutions','in the Banking Sector','among College Students'],
+      outcomes: ['System Performance','User Adoption','Data Security','Operational Efficiency','Digital Competence','Service Quality','Innovation Output'],
+    }
+  },
+  {
+    id: 'business',
+    name: 'Business & Management',
+    icon: '📊',
+    desc: 'Entrepreneurship, finance, organizational behavior',
+    color: '#f0a845',
+    algorithms: ['Linear Regression','Logistic Regression','Random Forest','K-Means Clustering','Apriori Algorithm','Decision Tree','Neural Network','Support Vector Machine (SVM)','Time-Series Forecasting (ARIMA)','Gradient Boosting'],
+    keywords: {
+      subjects: ['Employee Performance','Organizational Culture','Financial Literacy','Customer Satisfaction','Supply Chain Management','Leadership Effectiveness','Small Business Sustainability','Marketing Strategies','Consumer Behavior','Corporate Governance','Entrepreneurial Mindset','Workplace Well-being'],
+      actions: ['Analyzing','Evaluating','Investigating','Assessing','Measuring','Examining','Exploring','Comparing'],
+      methods: ['A Descriptive-Correlational Study','A Qualitative Inquiry','A Mixed-Methods Research','A Case Study Approach','A Survey-Based Analysis','An Empirical Study'],
+      contexts: ['in Micro, Small, and Medium Enterprises','in Retail Businesses','in the Service Industry','among Filipino Entrepreneurs','in the BPO Sector','in Local Government Enterprises'],
+      outcomes: ['Business Performance','Profitability','Workforce Productivity','Customer Loyalty','Organizational Growth','Financial Stability','Competitive Advantage'],
+    }
+  },
+  {
+    id: 'environment',
+    name: 'Environment',
+    icon: '🌍',
+    desc: 'Ecology, pollution, conservation, sustainability',
+    color: '#3bbfa8',
+    algorithms: ['Random Forest','K-Means Clustering','Support Vector Machine (SVM)','Neural Network','Long Short-Term Memory (LSTM)','Decision Tree','Linear Regression','Convolutional Neural Network (CNN)','Time-Series Analysis (ARIMA)','Anomaly Detection Algorithm'],
+    keywords: {
+      subjects: ['Solid Waste Management','Carbon Emissions','Biodiversity Conservation','Water Pollution','Environmental Awareness','Climate Change Adaptation','Renewable Energy Adoption','Coastal Ecosystem Protection','Air Quality Monitoring','Green Infrastructure'],
+      actions: ['Assessing','Evaluating','Analyzing','Investigating','Examining','Measuring','Developing','Monitoring'],
+      methods: ['An Environmental Impact Study','A Descriptive Analysis','A Community-Based Research','A Longitudinal Study','A Case Study','A Mixed-Methods Approach'],
+      contexts: ['in Coastal Communities','in Urban Areas','in Protected Forest Zones','among Local Government Units','in Island Communities','in Industrialized Regions'],
+      outcomes: ['Environmental Quality','Community Resilience','Ecosystem Health','Policy Compliance','Sustainability Index','Carbon Footprint Reduction','Biodiversity Preservation'],
+    }
+  },
+  {
+    id: 'social',
+    name: 'Social Sciences',
+    icon: '🤝',
+    desc: 'Sociology, psychology, community development',
+    color: '#e07cba',
+    algorithms: ['Sentiment Analysis Algorithm','Naive Bayes','Logistic Regression','K-Means Clustering','Random Forest','Natural Language Processing (NLP)','Decision Tree','Support Vector Machine (SVM)','Social Network Analysis Algorithm','Topic Modeling (LDA)'],
+    keywords: {
+      subjects: ['Mental Health Awareness','Community Participation','Gender Equality','Social Capital','Youth Unemployment','Family Dynamics','Poverty Alleviation','Social Media Influence','Community Resilience','Civic Engagement','Domestic Violence','Cultural Identity'],
+      actions: ['Exploring','Investigating','Analyzing','Examining','Assessing','Understanding','Evaluating','Comparing'],
+      methods: ['A Phenomenological Study','A Grounded Theory Approach','A Descriptive-Qualitative Research','A Case Study','A Narrative Inquiry','A Survey Research'],
+      contexts: ['among Urban Poor Communities','in Indigenous Communities','among Filipino Youth','in Displaced Communities','in Marginalized Sectors','among Women in the Workforce'],
+      outcomes: ['Social Well-being','Community Empowerment','Mental Health Outcomes','Gender Equity','Social Cohesion','Livelihood Improvement','Policy Effectiveness'],
+    }
+  },
+  {
+    id: 'criminal',
+    name: 'Criminology & Law',
+    icon: '⚖️',
+    desc: 'Crime prevention, justice, law enforcement',
+    color: '#c87c4e',
+    algorithms: ['Random Forest','Decision Tree','K-Nearest Neighbor (KNN)','Naive Bayes','Support Vector Machine (SVM)','Neural Network','Logistic Regression','K-Means Clustering','Gradient Boosting','Anomaly Detection Algorithm'],
+    keywords: {
+      subjects: ['Crime Prevention Programs','Restorative Justice','Police Community Relations','Drug Rehabilitation','Recidivism Rates','Juvenile Delinquency','Digital Forensics','Human Trafficking','Cybercrime Awareness','Correctional Facilities Management'],
+      actions: ['Assessing','Evaluating','Analyzing','Investigating','Examining','Measuring','Comparing','Exploring'],
+      methods: ['A Descriptive Study','A Case Study','A Phenomenological Research','A Correlational Study','A Survey-Based Research','A Mixed-Methods Analysis'],
+      contexts: ['in Local Police Stations','among Juvenile Offenders','in Correctional Institutions','in Urban Crime Hotspots','among Law Enforcement Officers','in Barangay Justice Systems'],
+      outcomes: ['Crime Reduction','Community Safety','Rehabilitation Success','Law Enforcement Effectiveness','Justice Access','Recidivism Reduction','Policy Reform'],
+    }
+  },
+  {
+    id: 'engineering',
+    name: 'Engineering',
+    icon: '⚙️',
+    desc: 'Civil, mechanical, electrical, structural design',
+    color: '#7aafdb',
+    algorithms: ['Genetic Algorithm','Finite Element Algorithm','Fuzzy Logic Algorithm','Neural Network','Support Vector Machine (SVM)','Simulated Annealing','Particle Swarm Optimization','Random Forest','Linear Regression','Dijkstra\'s Algorithm'],
+    keywords: {
+      subjects: ['Structural Integrity','Sustainable Building Materials','Traffic Flow Management','Renewable Energy Systems','Bridge Design Optimization','Waste-to-Energy Conversion','Seismic Resistance','Water Treatment Systems','Pavement Performance','Flood Control Structures'],
+      actions: ['Designing','Evaluating','Analyzing','Investigating','Optimizing','Assessing','Developing','Testing'],
+      methods: ['An Experimental Study','A Simulation-Based Research','A Comparative Analysis','A Prototype Development Study','A Structural Analysis','A Field-Based Investigation'],
+      contexts: ['in Urban Infrastructure Projects','in Rural Road Construction','in Flood-Prone Areas','in Earthquake-Vulnerable Regions','in Developing Communities','for Low-Cost Housing Solutions'],
+      outcomes: ['Structural Safety','Cost Efficiency','Energy Sustainability','Environmental Impact','Construction Quality','System Performance','Material Durability'],
+    }
+  },
+  {
+    id: 'tourism',
+    name: 'Tourism & Hospitality',
+    icon: '✈️',
+    desc: 'Travel, accommodation, cultural tourism',
+    color: '#e8a05a',
+    algorithms: ['Collaborative Filtering','Content-Based Filtering Algorithm','K-Means Clustering','Sentiment Analysis Algorithm','Random Forest','Decision Tree','Naive Bayes','K-Nearest Neighbor (KNN)','Apriori Algorithm','Natural Language Processing (NLP)'],
+    keywords: {
+      subjects: ['Tourist Satisfaction','Sustainable Tourism','Hotel Service Quality','Cultural Heritage Tourism','Eco-Tourism Development','Destination Marketing','Visitor Behavior','Tourism Revenue','Hospitality Workforce','Local Tourism Promotion'],
+      actions: ['Analyzing','Evaluating','Assessing','Investigating','Exploring','Measuring','Comparing'],
+      methods: ['A Descriptive Survey','A Case Study','A Qualitative Inquiry','A Mixed-Methods Study','A Customer Satisfaction Research','A Benchmarking Study'],
+      contexts: ['in Philippine Tourist Destinations','in Heritage Sites','in Island Resorts','among Local and Foreign Tourists','in Rural Ecotourism Areas','in Budget Accommodation Establishments'],
+      outcomes: ['Tourist Loyalty','Economic Growth','Community Livelihood','Service Excellence','Destination Competitiveness','Cultural Preservation','Sustainable Development'],
+    }
+  },
+  {
+    id: 'nursing',
+    name: 'Nursing',
+    icon: '💉',
+    desc: 'Patient care, nursing education, clinical practice',
+    color: '#d46fca',
+    algorithms: ['Decision Tree','Random Forest','Naive Bayes','K-Nearest Neighbor (KNN)','Logistic Regression','Support Vector Machine (SVM)','Neural Network','Gradient Boosting','Linear Regression','Fuzzy Logic Algorithm'],
+    keywords: {
+      subjects: ['Nursing Competency','Patient Safety Culture','Nurse Burnout','Clinical Decision-Making','Nursing Care Quality','Pain Management Practices','Infection Control','Nursing Education Outcomes','Work-Life Balance','Geriatric Care Practices'],
+      actions: ['Assessing','Evaluating','Measuring','Investigating','Examining','Exploring','Analyzing','Improving'],
+      methods: ['A Descriptive-Correlational Study','A Phenomenological Research','A Quasi-Experimental Study','A Survey Research','A Mixed-Methods Approach','A Cross-Sectional Study'],
+      contexts: ['in Tertiary Hospitals','among ICU Nurses','in Community Health Centers','among Newly Licensed Nurses','in Pediatric Wards','in Long-Term Care Facilities'],
+      outcomes: ['Patient Safety','Nursing Practice Standards','Clinical Competence','Staff Retention','Care Quality','Nurse Wellbeing','Healthcare Outcomes'],
+    }
+  },
+  {
+    id: 'psychology',
+    name: 'Psychology',
+    icon: '🧠',
+    desc: 'Mental health, behavior, cognitive science',
+    color: '#9b7fe8',
+    algorithms: ['Sentiment Analysis Algorithm','Naive Bayes','Support Vector Machine (SVM)','Random Forest','K-Nearest Neighbor (KNN)','Decision Tree','Logistic Regression','Natural Language Processing (NLP)','Neural Network','K-Means Clustering'],
+    keywords: {
+      subjects: ['Anxiety and Depression','Cognitive Behavioral Therapy','Psychological Well-being','Stress Management','Behavioral Disorders','Emotional Intelligence','Self-Efficacy','Resilience','Social Anxiety','Mindfulness Practices','Parental Influence','Adolescent Mental Health'],
+      actions: ['Examining','Investigating','Analyzing','Assessing','Exploring','Measuring','Evaluating'],
+      methods: ['A Descriptive-Correlational Study','A Phenomenological Inquiry','A Quasi-Experimental Research','A Longitudinal Study','A Survey Research','A Case Study'],
+      contexts: ['among College Students','in Workplace Settings','among Adolescents','in Clinical Settings','among Frontline Workers','in Online Communities','among Senior Citizens'],
+      outcomes: ['Psychological Well-being','Mental Health Outcomes','Emotional Resilience','Coping Effectiveness','Quality of Life','Behavioral Change','Therapeutic Success'],
+    }
+  },
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let selectedEnv = null;
+
+// ── Populate environment dropdown ────────────────────────────────────────────
+const envSelect = document.getElementById('envSelect');
+ENVIRONMENTS.forEach(env => {
+  const opt = document.createElement('option');
+  opt.value = env.id;
+  opt.textContent = `${env.icon}  ${env.name}`;
+  envSelect.appendChild(opt);
+});
+
+envSelect.addEventListener('change', () => {
+  const env = ENVIRONMENTS.find(e => e.id === envSelect.value);
+  if (!env) return;
+  selectedEnv = env;
+
+  const preview = document.getElementById('envPreview');
+  document.getElementById('previewIcon').textContent = env.icon;
+  document.getElementById('previewName').textContent = env.name;
+  document.getElementById('previewDesc').textContent = env.desc;
+  document.getElementById('previewDot').style.setProperty('--preview-color', env.color);
+  preview.style.setProperty('--preview-color', env.color);
+  preview.classList.add('visible');
+
+  document.getElementById('btnGenerate').disabled = false;
+});
+
+// ── Title generation engine ──────────────────────────────────────────────────
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+function stripPrep(ctx) {
+  return ctx.replace(/^in /,'').replace(/^among /,'').replace(/^for /,'');
+}
+
+// Patterns WITHOUT algorithm
+const PATTERNS_PLAIN = [
+  (k, rt) => `${pick(k.actions)} ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt) => `${pick(k.subjects)} and Its Relationship to ${pick(k.outcomes)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt) => `The Effect of ${pick(k.actions).replace(/ing$/,'ion')} on ${pick(k.outcomes)} ${pick(k.contexts)}: ${pick(k.methods)}`,
+  (k, rt) => `${pick(k.subjects)}: A ${capitalize(rt)} Study on ${pick(k.outcomes)} ${pick(k.contexts)}`,
+  (k, rt) => `Factors Affecting ${pick(k.outcomes)} ${pick(k.contexts)}: ${pick(k.methods)}`,
+  (k, rt) => `The Role of ${pick(k.subjects)} in Improving ${pick(k.outcomes)}: Evidence from ${stripPrep(pick(k.contexts))}`,
+  (k, rt) => `A ${capitalize(rt)} Study on ${pick(k.subjects)} ${pick(k.contexts)}`,
+  (k, rt) => `${pick(k.subjects)} as a Predictor of ${pick(k.outcomes)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt) => `Challenges and Opportunities in ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt) => `${pick(k.subjects)}: An Analysis of ${pick(k.outcomes)} ${pick(k.contexts)}`,
+];
+
+// Patterns WITH algorithm automatically embedded in the title
+const PATTERNS_ALGO = [
+  (k, rt, alg) => `Implementation of ${alg} for ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `${pick(k.subjects)} Using ${alg}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `A ${capitalize(rt)} Study on the Application of ${alg} in ${pick(k.subjects)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `${alg}-Based ${pick(k.subjects)}: ${pick(k.methods)} on ${pick(k.outcomes)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `Comparative Analysis of ${alg} for ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `Enhancing ${pick(k.outcomes)} Through ${alg}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `The Effectiveness of ${alg} in ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `${pick(k.actions)} ${pick(k.subjects)} Using ${alg}: A ${capitalize(rt)} Study ${pick(k.contexts)}`,
+  (k, rt, alg) => `Optimizing ${pick(k.outcomes)} Using ${alg} in ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+  (k, rt, alg) => `Developing a ${alg}-Based System for ${pick(k.subjects)}: ${pick(k.methods)} ${pick(k.contexts)}`,
+];
+
+function generateTitles(env, count, researchType) {
+  const k = env.keywords;
+  const algPool = env.algorithms || [];
+  const titles = new Set();
+  let attempts = 0;
+
+  while (titles.size < count && attempts < count * 8) {
+    let title;
+    // ~60% of titles include an algorithm name automatically
+    if (algPool.length > 0 && Math.random() < 0.6) {
+      const alg = pick(algPool);
+      title = pick(PATTERNS_ALGO)(k, researchType, alg);
+    } else {
+      title = pick(PATTERNS_PLAIN)(k, researchType);
+    }
+    title = title.replace(/\s+/g, ' ').trim();
+    titles.add(title);
+    attempts++;
+  }
+  return [...titles].slice(0, count);
+}
+
+// ── Generate button ──────────────────────────────────────────────────────────
+document.getElementById('btnGenerate').addEventListener('click', () => {
+  if (!selectedEnv) return;
+  const count = Math.min(15, Math.max(1, parseInt(document.getElementById('titleCount').value) || 5));
+  const researchType = document.getElementById('researchType').value;
+  showResults(selectedEnv, count, researchType);
+});
+
+function showResults(env, count, researchType) {
+  const btn = document.getElementById('btnGenerate');
+  const icon = btn.querySelector('svg');
+  icon.style.display = 'none';
+  const spin = document.createElement('div');
+  spin.className = 'spinner';
+  btn.prepend(spin);
+  btn.disabled = true;
+  btn.lastChild.textContent = ' Generating…';
+
+  setTimeout(() => {
+    const titles = generateTitles(env, count, researchType);
+    renderResults(env, titles);
+    spin.remove();
+    icon.style.display = '';
+    btn.disabled = false;
+    btn.querySelector('span') && btn.querySelector('span').remove();
+
+    document.getElementById('step-env').style.display = 'none';
+    const stepResult = document.getElementById('step-result');
+    stepResult.style.display = 'block';
+    stepResult.style.animation = 'none';
+    void stepResult.offsetWidth;
+    stepResult.style.animation = 'fadeUp 0.5s ease both';
+
+    document.getElementById('dot-1').classList.remove('active');
+    document.getElementById('dot-1').classList.add('done');
+    document.getElementById('dot-2').classList.add('active');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, 600);
+}
+
+function renderResults(env, titles) {
+  document.getElementById('resultEnvLabel').textContent = `${env.icon} ${env.name}`;
+  const list = document.getElementById('titlesList');
+  list.innerHTML = '';
+  titles.forEach((title, i) => {
+    const card = document.createElement('div');
+    card.className = 'title-card';
+    card.style.animationDelay = `${i * 60}ms`;
+    card.innerHTML = `
+      <div class="title-num">${i + 1}</div>
+      <div class="title-text">${title}</div>
+      <div class="title-actions">
+        <button class="icon-btn copy-btn" title="Copy title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+    `;
+    card.querySelector('.copy-btn').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(title).then(() => {
+        const b = e.currentTarget;
+        b.classList.add('copied');
+        b.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+        showToast('Title copied to clipboard!');
+        setTimeout(() => {
+          b.classList.remove('copied');
+          b.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+        }, 2000);
+      });
+    });
+    list.appendChild(card);
+  });
+}
+
+// ── Regen ────────────────────────────────────────────────────────────────────
+document.getElementById('btnRegen').addEventListener('click', () => {
+  if (!selectedEnv) return;
+  const count = Math.min(15, Math.max(1, parseInt(document.getElementById('titleCount').value) || 5));
+  const researchType = document.getElementById('researchType').value;
+  renderResults(selectedEnv, generateTitles(selectedEnv, count, researchType));
+});
+
+// ── Copy all ─────────────────────────────────────────────────────────────────
+document.getElementById('btnCopyAll').addEventListener('click', () => {
+  const text = [...document.querySelectorAll('.title-text')].map((c, i) => `${i + 1}. ${c.textContent}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('All titles copied!'));
+});
+
+// ── Back button ──────────────────────────────────────────────────────────────
+document.getElementById('btnBack').addEventListener('click', () => {
+  document.getElementById('step-result').style.display = 'none';
+  const stepEnv = document.getElementById('step-env');
+  stepEnv.style.display = 'block';
+  stepEnv.style.animation = 'none';
+  void stepEnv.offsetWidth;
+  stepEnv.style.animation = 'fadeUp 0.5s ease both';
+  document.getElementById('dot-1').classList.add('active');
+  document.getElementById('dot-1').classList.remove('done');
+  document.getElementById('dot-2').classList.remove('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
